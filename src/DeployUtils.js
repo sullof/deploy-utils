@@ -4,7 +4,6 @@ const path = require("path");
 const fs = require("fs-extra");
 const {Contract} = require("@ethersproject/contracts");
 const abi = require("ethereumjs-abi");
-let deployedJson = require("../export/deployed.json");
 
 const {networkNames, scanner} = require("./Config");
 
@@ -23,6 +22,7 @@ class DeployUtils {
   constructor(rootDir) {
     this.rootDir = rootDir;
     this.ensureExport();
+    this.deployedJson = require(path.join(this.rootDir, "export/deployed.json"));
   }
 
   ensureExport(resetDeployed) {
@@ -97,7 +97,7 @@ class DeployUtils {
   }
 
   getAddress(chainId, contractName) {
-    let address = deployedJson[chainId][contractName];
+    let address = this.deployedJson[chainId][contractName];
     if (Array.isArray(address)) {
       address = address[address.length - 1];
     }
