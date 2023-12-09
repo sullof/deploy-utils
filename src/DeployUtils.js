@@ -18,7 +18,7 @@ class DeployUtils {
 
   debug(...params) {
     if (!!this.logger) {
-      logger(...params);
+      this.logger(...params);
     }
   }
 
