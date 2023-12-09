@@ -143,7 +143,7 @@ class DeployUtils {
     return upgraded;
   }
 
-  async deployContractViaNickSFactory(
+  async deployViaNickSFactory(
       deployer,
       contractName,
       constructorTypes,
