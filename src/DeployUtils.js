@@ -7,23 +7,21 @@ const abi = require("ethereumjs-abi");
 
 const {networkNames, scanner} = require("./Config");
 
-function noDebugLog() {
-  return !!process.env.NO_DEBUG_LOG;
-}
-
-function debug(...params) {
-  if (noDebugLog()) {
-    console.debug(...params);
-  }
-}
-
 class DeployUtils {
 
-  constructor(rootDir) {
+  constructor(rootDir, logger) {
     this.rootDir = rootDir;
+    this.logger = logger;
     this.ensureExport();
     this.deployedJson = require(path.join(this.rootDir, "export/deployed.json"));
   }
+
+  debug(...params) {
+    if (!!this.logger) {
+      logger(...params);
+    }
+  }
+
 
   ensureExport(resetDeployed) {
     fs.ensureDirSync(path.join(this.rootDir, "export"));
@@ -67,26 +65,26 @@ class DeployUtils {
   }
 
   async Tx(promise, msg) {
-    debug();
+    this.debug();
     if (msg) {
-      debug(msg);
+      this.debug(msg);
     }
     let tx = await promise;
-    debug("Tx:", tx.hash);
+    this.debug("Tx:", tx.hash);
     await tx.wait();
-    debug("Mined.");
+    this.debug("Mined.");
   }
 
   async deploy(contractName, ...args) {
     const chainId = await this.currentChainId();
-    debug("Deploying", contractName, "to", this.network(chainId));
+    this.debug("Deploying", contractName, "to", this.network(chainId));
     const contract = await ethers.getContractFactory(contractName);
     const deployed = await contract.deploy(...args);
-    debug("Tx:", deployed.deployTransaction.hash);
+    this.debug("Tx:", deployed.deployTransaction.hash);
     await deployed.deployed();
-    debug("Deployed at", deployed.address);
+    this.debug("Deployed at", deployed.address);
     await this.saveDeployed(chainId, [contractName], [deployed.address]);
-    debug(`To verify the source code:
+    this.debug(`To verify the source code:
     
   npx hardhat verify --show-stack-traces --network ${this.network(chainId)} ${deployed.address} ${[...args]
       .map((e) => e.toString())
@@ -119,27 +117,27 @@ class DeployUtils {
       }
     }
     const chainId = await this.currentChainId();
-    debug("Deploying", contractName, "to", this.network(chainId));
+    this.debug("Deploying", contractName, "to", this.network(chainId));
     const contract = await ethers.getContractFactory(contractName);
     const deployed = await upgrades.deployProxy(contract, [...args], options);
-    debug("Tx:", deployed.deployTransaction.hash);
+    this.debug("Tx:", deployed.deployTransaction.hash);
     await deployed.deployed();
-    debug("Deployed at", deployed.address);
+    this.debug("Deployed at", deployed.address);
     await this.saveDeployed(chainId, [contractName], [deployed.address]);
-    debug(await this.verifyCodeInstructions(contractName, deployed.deployTransaction.hash));
+    this.debug(await this.verifyCodeInstructions(contractName, deployed.deployTransaction.hash));
     return deployed;
   }
 
   async upgradeProxy(contractName, gasLimit) {
     const chainId = await this.currentChainId();
-    debug("Upgrading", contractName, "to", this.network(chainId));
+    this.debug("Upgrading", contractName, "to", this.network(chainId));
     const Contract = await ethers.getContractFactory(contractName);
     const address = this.getAddress(chainId, contractName);
     const upgraded = await upgrades.upgradeProxy(address, Contract, gasLimit ? {gasLimit} : {});
-    debug("Tx:", upgraded.deployTransaction.hash);
+    this.debug("Tx:", upgraded.deployTransaction.hash);
     await upgraded.deployed();
-    debug("Upgraded");
-    debug(await this.verifyCodeInstructions(contractName, upgraded.deployTransaction.hash));
+    this.debug("Upgraded");
+    this.debug(await this.verifyCodeInstructions(contractName, upgraded.deployTransaction.hash));
     return upgraded;
   }
 
@@ -170,11 +168,13 @@ class DeployUtils {
     };
     const transaction = await deployer.sendTransaction(tx);
     await transaction.wait();
-    return ethers.utils.getCreate2Address(
+    const address = ethers.utils.getCreate2Address(
         this.nickSFactoryAddress(),
         salt,
         ethers.utils.keccak256(contractBytecode),
     );
+    this.debug("Deployed via Nick's Factory at", address);
+    return address;
   }
 
   nickSFactoryAddress() {
