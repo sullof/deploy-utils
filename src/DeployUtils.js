@@ -13,7 +13,6 @@ class DeployUtils {
     this.rootDir = rootDir;
     this.logger = logger;
     this.ensureExport();
-    this.deployedJson = require(path.join(this.rootDir, "export/deployed.json"));
   }
 
   debug(...params) {
@@ -24,9 +23,12 @@ class DeployUtils {
 
 
   ensureExport(resetDeployed) {
-    fs.ensureDirSync(path.join(this.rootDir, "export"));
-    if (resetDeployed || !fs.pathExistsSync(path.join(this.rootDir, "export/deployed.json"))) {
-      fs.writeFileSync(path.join(this.rootDir, "export/deployed.json"), "{}");
+    if (this.rootDir) {
+      fs.ensureDirSync(path.join(this.rootDir, "export"));
+      this.deployedJson = require(path.join(this.rootDir, "export/deployed.json"));
+      if (resetDeployed || !fs.pathExistsSync(path.join(this.rootDir, "export/deployed.json"))) {
+        fs.writeFileSync(path.join(this.rootDir, "export/deployed.json"), "{}");
+      }
     }
   }
 
@@ -84,7 +86,7 @@ class DeployUtils {
     await deployed.deployed();
     this.debug("Deployed at", deployed.address);
     await this.saveDeployed(chainId, [contractName], [deployed.address]);
-    if (!/1337/.test(chainId.toString())) {
+    if (!/1337$/.test(chainId.toString())) {
       this.debug(`To verify the source code:
     
   npx hardhat verify --show-stack-traces --network ${hre.network.name} ${deployed.address} ${[...args]
@@ -97,17 +99,22 @@ class DeployUtils {
   }
 
   getAddress(chainId, contractName) {
-    let address = this.deployedJson[chainId][contractName];
-    if (Array.isArray(address)) {
-      address = address[address.length - 1];
+    if (this.rootDir) {
+      let address = this.deployedJson[chainId][contractName];
+      if (Array.isArray(address)) {
+        address = address[address.length - 1];
+      }
+      return address;
     }
-    return address;
   }
 
   async attach(contractName, contractAddress) {
     const chainId = await this.currentChainId();
     const contract = await ethers.getContractFactory(contractName);
     const address = contractAddress || this.getAddress(chainId, contractName);
+    if (!address) {
+      throw new Error(`Address not found for ${contractName} on chain ${this.network(chainId)}`);
+    }
     return contract.attach(address);
   }
 
@@ -219,6 +226,7 @@ class DeployUtils {
   }
 
   async saveDeployed(chainId, names, addresses, extras) {
+    if (this.rootDir) {
       if (names.length !== addresses.length) {
         throw new Error("Inconsistent arrays");
       }
@@ -248,6 +256,7 @@ class DeployUtils {
         deployed.extras[chainId] = Object.assign(deployed.extras[chainId], extras);
       }
       await fs.writeFile(deployedJsonPath, JSON.stringify(deployed, null, 2));
+    }
   }
 
   encodeArguments(parameterTypes, parameterValues) {
@@ -308,7 +317,7 @@ as a single file, without constructor's parameters
     await fs.ensureDir(logDir);
     const shortDate = new Date().toISOString().substring(5, 16);
     const fn = [contractName, chainId, shortDate].join("_") + ".log";
-    if (chainId !== 1337) {
+    if (this.rootDir) {
       await fs.writeFile(path.resolve(logDir, fn), response);
       return `${response}
     
