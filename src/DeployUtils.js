@@ -281,6 +281,7 @@ class DeployUtils {
     }
   }
   async verifyCodeInstructions(contractName, tx) {
+    if (this.rootDir) {
       const chainId = await this.currentChainId();
       let chainName = networkNames[chainId] || "unknown-" + chainId;
       const oz = JSON.parse(await fs.readFile(path.resolve(this.rootDir, ".openzeppelin", chainName + ".json")));
@@ -309,24 +310,27 @@ as a single file, without constructor's parameters
 `;
       }
       return this.saveLog(contractName, response);
+    }
   }
 
   async saveLog(contractName, response) {
-    const chainId = await this.currentChainId();
-    const logDir = path.resolve(this.rootDir, "log");
-    await fs.ensureDir(logDir);
-    const shortDate = new Date().toISOString().substring(5, 16);
-    const fn = [contractName, chainId, shortDate].join("_") + ".log";
     if (this.rootDir) {
-      await fs.writeFile(path.resolve(logDir, fn), response);
-      return `${response}
+      const chainId = await this.currentChainId();
+      const logDir = path.resolve(this.rootDir, "log");
+      await fs.ensureDir(logDir);
+      const shortDate = new Date().toISOString().substring(5, 16);
+      const fn = [contractName, chainId, shortDate].join("_") + ".log";
+      if (this.rootDir) {
+        await fs.writeFile(path.resolve(logDir, fn), response);
+        return `${response}
     
 Info saved in:
     
     log/${fn}
 `;
-    } else {
-      return response;
+      } else {
+        return response;
+      }
     }
   }
 }
