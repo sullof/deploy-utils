@@ -30,7 +30,6 @@ describe("Testing contract deployments", function () {
     const deployedJson = JSON.parse(await fs.readFile(deployedJsonPath));
     expect(deployedJson[chainId].SomeERC20).to.equal(erc20.address);
     expect(deployedJson[chainId].SomeUpgradeableERC20).to.equal(upgradeableERC20.address);
-
   });
 
   // TODO add more tests

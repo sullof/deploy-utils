@@ -2,13 +2,12 @@ const hre = require("hardhat");
 const ethers = hre.ethers;
 const path = require("path");
 const fs = require("fs-extra");
-const {Contract} = require("@ethersproject/contracts");
+const { Contract } = require("@ethersproject/contracts");
 const abi = require("ethereumjs-abi");
 
-const {networkNames, scanner} = require("./Config");
+const { networkNames, scanner } = require("./Config");
 
 class DeployUtils {
-
   constructor(rootDir, logger) {
     this.rootDir = rootDir;
     this.logger = logger;
@@ -21,7 +20,6 @@ class DeployUtils {
     }
   }
 
-
   ensureExport(resetDeployed) {
     if (this.rootDir) {
       fs.ensureDirSync(path.join(this.rootDir, "export"));
@@ -33,7 +31,7 @@ class DeployUtils {
   }
 
   getProviders() {
-    const {INFURA_API_KEY} = process.env;
+    const { INFURA_API_KEY } = process.env;
 
     const rpc = (url) => {
       return new ethers.providers.JsonRpcProvider(url);
@@ -90,8 +88,8 @@ class DeployUtils {
       this.debug(`To verify the source code:
     
   npx hardhat verify --show-stack-traces --network ${hre.network.name} ${deployed.address} ${[...args]
-          .map((e) => e.toString())
-          .join(" ")}
+    .map((e) => e.toString())
+    .join(" ")}
       
 `);
     }
@@ -110,12 +108,11 @@ class DeployUtils {
 
   async attach(contractName, contractAddress) {
     const chainId = await this.currentChainId();
-    const contract = await ethers.getContractFactory(contractName);
     const address = contractAddress || this.getAddress(chainId, contractName);
     if (!address) {
       throw new Error(`Address not found for ${contractName} on chain ${this.network(chainId)}`);
     }
-    return contract.attach(address);
+    return await ethers.getContractAt(contractName, address);
   }
 
   async deployProxy(contractName, ...args) {
@@ -142,7 +139,7 @@ class DeployUtils {
     this.debug("Upgrading", contractName, "to", hre.network.name);
     const Contract = await ethers.getContractFactory(contractName);
     const address = this.getAddress(chainId, contractName);
-    const upgraded = await upgrades.upgradeProxy(address, Contract, gasLimit ? {gasLimit} : {});
+    const upgraded = await upgrades.upgradeProxy(address, Contract, gasLimit ? { gasLimit } : {});
     this.debug("Tx:", upgraded.deployTransaction.hash);
     await upgraded.deployed();
     this.debug("Upgraded");
@@ -150,24 +147,19 @@ class DeployUtils {
     return upgraded;
   }
 
-  async deployViaNickSFactory(
-      deployer,
-      contractName,
-      constructorTypes,
-      constructorArgs,
-      salt
-  ) {
+  async deployContractViaNickSFactory(deployer, contractName, constructorTypes, constructorArgs, salt) {
+    if (!Array.isArray(constructorTypes)) {
+      salt = constructorTypes;
+      constructorTypes = undefined;
+      constructorArgs = undefined;
+    }
     const json = await artifacts.readArtifact(contractName);
     let contractBytecode = json.bytecode;
     if (constructorTypes) {
       const encodedArgs = ethers.utils.defaultAbiCoder.encode(constructorTypes, constructorArgs);
       contractBytecode = contractBytecode + encodedArgs.substring(2);
     }
-    const address = ethers.utils.getCreate2Address(
-        this.nickSFactoryAddress(),
-        salt,
-        ethers.utils.keccak256(contractBytecode),
-    );
+    const address = ethers.utils.getCreate2Address(this.nickSFactoryAddress(), salt, ethers.utils.keccak256(contractBytecode));
     const code = await ethers.provider.getCode(address);
     if (code === "0x") {
       const data = salt + contractBytecode.substring(2);
@@ -177,27 +169,28 @@ class DeployUtils {
       };
       const transaction = await deployer.sendTransaction(tx);
       await transaction.wait();
-      this.debug("Deployed via Nick's Factory at", address);
+      this.debug("Just deployed via Nick's Factory at", address);
       const chainId = await this.currentChainId();
       const previouslyDeployedAt = await this.getAddress(chainId, contractName);
-      if (previouslyDeployedAt !==  address) {
+      if (previouslyDeployedAt !== address) {
         await this.saveDeployed(chainId, [contractName], [address]);
       } // else, it has been already saved. We avoid duplicates
+    } else {
+      this.debug("Previously deployed via Nick's Factory at", address);
     }
-    return address;
+    return await ethers.getContractAt(contractName, address);
   }
 
   nickSFactoryAddress() {
     return `0x4e59b44847b379578588920ca78fbf26c0b4956c`;
   }
 
-  async getAddressViaNickSFactory(
-      deployer,
-      contractName,
-      constructorTypes,
-      constructorArgs,
-      salt
-  ) {
+  async getAddressOfContractDeployedViaNickSFactory(deployer, contractName, constructorTypes, constructorArgs, salt) {
+    if (!Array.isArray(constructorTypes)) {
+      salt = constructorTypes;
+      constructorTypes = undefined;
+      constructorArgs = undefined;
+    }
     const json = await artifacts.readArtifact(contractName);
     let contractBytecode = json.bytecode;
 
@@ -211,25 +204,22 @@ class DeployUtils {
       contractBytecode = contractBytecode + encodedArgs.substring(2); // Remove '0x' from encoded args
     }
 
-    return ethers.utils.getCreate2Address(
-        this.nickSFactoryAddress(),
-        salt,
-        ethers.utils.keccak256(contractBytecode),
-    );
+    return ethers.utils.getCreate2Address(this.nickSFactoryAddress(), salt, ethers.utils.keccak256(contractBytecode));
   }
 
-  async isDeployedViaNickSFactory(
+  async isContractDeployedViaNickSFactory(deployer, contractName, constructorTypes, constructorArgs, salt) {
+    if (!Array.isArray(constructorTypes)) {
+      salt = constructorTypes;
+      constructorTypes = undefined;
+      constructorArgs = undefined;
+    }
+    const address = await this.getAddressOfContractDeployedViaNickSFactory(
       deployer,
       contractName,
       constructorTypes,
       constructorArgs,
-      salt
-  ) {
-    const address = await this.getAddressViaNickSFactory(deployer,
-        contractName,
-    constructorTypes,
-    constructorArgs,
-    salt);
+      salt,
+    );
 
     const code = await ethers.provider.getCode(address);
     return code !== "0x";
@@ -241,7 +231,7 @@ class DeployUtils {
   }
 
   network(chainId) {
-    return networkNames[chainId] || "unknown-" + chainId
+    return networkNames[chainId] || "unknown-" + chainId;
   }
 
   async currentChainId() {

@@ -4,17 +4,16 @@ pragma solidity 0.8.20;
 // Author: Jerry Bassat <jerry@superpower.io>
 // Superpower Labs / Syn City
 
-import "@openzeppelin/contracts-upgradeable/token/ERC20/ERC20Upgradeable.sol";
-import "@openzeppelin/contracts-upgradeable/proxy/utils/UUPSUpgradeable.sol";
+import {ERC20Upgradeable} from "@openzeppelin/contracts-upgradeable/token/ERC20/ERC20Upgradeable.sol";
+import {UUPSUpgradeable} from "@openzeppelin/contracts-upgradeable/proxy/utils/UUPSUpgradeable.sol";
 
 contract SomeUpgradeableERC20 is ERC20Upgradeable, UUPSUpgradeable {
-
   /// @custom:oz-upgrades-unsafe-allow constructor
   constructor() {
     _disableInitializers();
   }
 
-  function initialize() initializer public {
+  function initialize() public initializer {
     __ERC20_init("Some ERC20 Upgradeable", "SOMEUP");
     __UUPSUpgradeable_init();
   }
