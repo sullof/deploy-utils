@@ -190,7 +190,7 @@ class DeployUtils {
       contractName,
       constructorTypes,
       constructorArgs,
-      salt // example >> this.keccak256("Cruna"),
+      salt
   ) {
     const json = await artifacts.readArtifact(contractName);
     let contractBytecode = json.bytecode;
@@ -210,6 +210,23 @@ class DeployUtils {
         salt,
         ethers.utils.keccak256(contractBytecode),
     );
+  }
+
+  async isDeployedViaNickSFactory(
+      deployer,
+      contractName,
+      constructorTypes,
+      constructorArgs,
+      salt
+  ) {
+    const address = await this.getAddressViaNickSFactory(deployer,
+        contractName,
+    constructorTypes,
+    constructorArgs,
+    salt);
+
+    const code = await ethers.provider.getCode(address);
+    return code !== "0x";
   }
 
   keccak256(str) {
