@@ -163,21 +163,27 @@ class DeployUtils {
       const encodedArgs = ethers.utils.defaultAbiCoder.encode(constructorTypes, constructorArgs);
       contractBytecode = contractBytecode + encodedArgs.substring(2);
     }
-    const data = salt + contractBytecode.substring(2);
-    const tx = {
-      to: this.nickSFactoryAddress(),
-      data,
-    };
-    const transaction = await deployer.sendTransaction(tx);
-    await transaction.wait();
     const address = ethers.utils.getCreate2Address(
         this.nickSFactoryAddress(),
         salt,
         ethers.utils.keccak256(contractBytecode),
     );
-    this.debug("Deployed via Nick's Factory at", address);
-    const chainId = await this.currentChainId();
-    await this.saveDeployed(chainId, [contractName], [address]);
+    const code = await ethers.provider.getCode(address);
+    if (code === "0x") {
+      const data = salt + contractBytecode.substring(2);
+      const tx = {
+        to: this.nickSFactoryAddress(),
+        data,
+      };
+      const transaction = await deployer.sendTransaction(tx);
+      await transaction.wait();
+      this.debug("Deployed via Nick's Factory at", address);
+      const chainId = await this.currentChainId();
+      const previouslyDeployedAt = await this.getAddress(chainId, contractName);
+      if (previouslyDeployedAt !==  address) {
+        await this.saveDeployed(chainId, [contractName], [address]);
+      } // else, it has been already saved. We avoid duplicates
+    }
     return address;
   }
 
