@@ -1,15 +1,13 @@
-# DeployUtils
+# EthDeployUtils
 
-A very opinionated set of utilities to deploy and upgrade my Hardhat projects. You are welcome to use it, but it's not meant to be a general purpose tool.
+A very opinionated set of utilities to deploy and upgrade my Hardhat projects. You are welcome to use it, but it's not meant to be a general purpose tool, also because I may introduce breaking changes at any time. 
 
 
 ## History
 
-**1.0.0-beta.8**
-- if `constructorTypes` not an array, it assumes the third parameter is the salt
+**1.0.0-beta.0**
 
-**1.0.0-beta.7**
-- `deployContractViaNickSFactory` returns now the contract, instead of the address
+- First version
 
 ## License
 MIT - Copyright (C) 2021+ Francesco Sullo

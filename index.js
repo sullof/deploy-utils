@@ -1,2 +1,2 @@
 
-module.exports = require("./src/DeployUtils");
+module.exports = require("./src/EthDeployUtils");

@@ -7,7 +7,7 @@ const abi = require("ethereumjs-abi");
 
 const { networkNames, scanner } = require("./Config");
 
-class DeployUtils {
+class EthDeployUtils {
   constructor(rootDir, logger) {
     this.rootDir = rootDir;
     this.logger = logger;
@@ -148,7 +148,7 @@ class DeployUtils {
   }
 
   async deployContractViaNickSFactory(deployer, contractName, constructorTypes, constructorArgs, salt) {
-    if (!Array.isArray(constructorTypes)) {
+    if (!salt && !Array.isArray(constructorTypes)) {
       salt = constructorTypes;
       constructorTypes = undefined;
       constructorArgs = undefined;
@@ -169,14 +169,14 @@ class DeployUtils {
       };
       const transaction = await deployer.sendTransaction(tx);
       await transaction.wait();
-      this.debug("Just deployed via Nick's Factory at", address);
+      this.debug(`Just deployed ${contractName} via Nick's Factory at`, address);
       const chainId = await this.currentChainId();
       const previouslyDeployedAt = await this.getAddress(chainId, contractName);
       if (previouslyDeployedAt !== address) {
         await this.saveDeployed(chainId, [contractName], [address]);
       } // else, it has been already saved. We avoid duplicates
     } else {
-      this.debug("Previously deployed via Nick's Factory at", address);
+      this.debug(`Previously deployed ${contractName} via Nick's Factory at`, address);
     }
     return await ethers.getContractAt(contractName, address);
   }
@@ -186,7 +186,7 @@ class DeployUtils {
   }
 
   async getAddressOfContractDeployedViaNickSFactory(deployer, contractName, constructorTypes, constructorArgs, salt) {
-    if (!Array.isArray(constructorTypes)) {
+    if (!salt && !Array.isArray(constructorTypes)) {
       salt = constructorTypes;
       constructorTypes = undefined;
       constructorArgs = undefined;
@@ -208,7 +208,7 @@ class DeployUtils {
   }
 
   async isContractDeployedViaNickSFactory(deployer, contractName, constructorTypes, constructorArgs, salt) {
-    if (!Array.isArray(constructorTypes)) {
+    if (!salt && !Array.isArray(constructorTypes)) {
       salt = constructorTypes;
       constructorTypes = undefined;
       constructorArgs = undefined;
@@ -228,6 +228,10 @@ class DeployUtils {
   keccak256(str) {
     const bytes = ethers.utils.toUtf8Bytes(str);
     return ethers.utils.keccak256(bytes);
+  }
+
+  bytes4(bytes32value) {
+    return ethers.utils.hexDataSlice(bytes32value, 0, 4);
   }
 
   network(chainId) {
@@ -348,4 +352,4 @@ Info saved in:
   }
 }
 
-module.exports = DeployUtils;
+module.exports = EthDeployUtils;

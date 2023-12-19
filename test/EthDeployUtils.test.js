@@ -1,5 +1,5 @@
 const { expect } = require("chai");
-const DeployUtils = require("../src/DeployUtils");
+const DeployUtils = require("../src/EthDeployUtils");
 const path = require("path");
 const fs = require("fs-extra");
 
