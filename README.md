@@ -5,6 +5,10 @@ A very opinionated set of utilities to deploy and upgrade my Hardhat projects. Y
 
 ## History
 
+**1.0.0-beta.4**
+
+- Candidate release.
+
 **1.0.0-beta.0**
 
 - First version

@@ -3,12 +3,14 @@ const DeployUtils = require("../src/EthDeployUtils");
 const path = require("path");
 const fs = require("fs-extra");
 
-describe("Testing contract deployments", function () {
+describe("Testing contract deployments", async function () {
   let erc20, upgradeableERC20;
   let deployer, bob, alice;
   let chainId;
-  const deployUtils = new DeployUtils(path.resolve(__dirname, ".."));
-  const deployedJsonPath = path.resolve(__dirname, "../export/deployed.json");
+  const tmpDir = path.resolve(__dirname, "../tmp");
+  await fs.ensureDif(tmpDir);
+  const deployUtils = new DeployUtils(tmpDir);
+  const deployedJsonPath = path.resolve(__dirname, "../tmp/export/deployed.json");
 
   before(async function () {
     [deployer, bob, alice] = await ethers.getSigners();
