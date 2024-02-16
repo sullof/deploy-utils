@@ -68,7 +68,7 @@ class EthDeployUtils {
 
   isMainnet(chainId) {
     // If true, for sure it is not a testnet
-    // If false, it can be a main network not listed in mainnets.json
+    // If false, it can be a main network not listed in Config
     return !!mainnets[chainId.toString()];
   }
 
