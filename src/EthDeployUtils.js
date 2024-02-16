@@ -5,7 +5,7 @@ const fs = require("fs-extra");
 const { Contract } = require("@ethersproject/contracts");
 const abi = require("ethereumjs-abi");
 
-const { networkNames, scanner } = require("./Config");
+const { networkNames, scanner, mainnets } = require("./Config");
 
 class EthDeployUtils {
   constructor(rootDir, logger) {
@@ -64,6 +64,12 @@ class EthDeployUtils {
 
   async getContract(name, folder, address, chainId) {
     return new Contract(address, await this.getABI(name, folder), this.getProviders()[chainId]);
+  }
+
+  isMainnet(chainId) {
+    // If true, for sure it is not a testnet
+    // If false, it can be a main network not listed in mainnets.json
+    return !!mainnets[chainId.toString()];
   }
 
   async Tx(promise, msg) {
