@@ -160,7 +160,7 @@ class EthDeployUtils {
     return upgraded;
   }
 
-  async deployContractViaNickSFactory(deployer, contractName, constructorTypes, constructorArgs, salt) {
+  async deployContractViaNickSFactory(deployer, contractName, constructorTypes, constructorArgs, salt, extraParams = {}) {
     if (!salt && !Array.isArray(constructorTypes)) {
       salt = constructorTypes;
       constructorTypes = undefined;
@@ -179,10 +179,11 @@ class EthDeployUtils {
     const code = await ethers.provider.getCode(address);
     if (code === "0x") {
       const data = salt + contractBytecode.substring(2);
-      const tx = {
+      const tx = Object.assign({
         to: this.nickSFactoryAddress(),
         data,
-      };
+      }, extraParams);
+
       const transaction = await deployer.sendTransaction(tx);
       await transaction.wait();
       this.debug(`Just deployed ${contractName} via Nick's Factory at`, address);
