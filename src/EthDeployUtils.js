@@ -22,11 +22,13 @@ class EthDeployUtils {
 
   ensureExport(resetDeployed) {
     if (this.rootDir) {
-      fs.ensureDirSync(path.join(this.rootDir, "export"));
-      this.deployedJson = require(path.join(this.rootDir, "export/deployed.json"));
-      if (resetDeployed || !fs.pathExistsSync(path.join(this.rootDir, "export/deployed.json"))) {
-        fs.writeFileSync(path.join(this.rootDir, "export/deployed.json"), "{}");
+      const exportDir = path.join(this.rootDir, "export");
+      fs.ensureDirSync(exportDir);
+      const deployedJsonPath = path.join(exportDir, "deployed.json");
+      if (!fs.pathExistsSync(deployedJsonPath) || resetDeployed) {
+        fs.writeFileSync(deployedJsonPath, "{}");
       }
+      this.deployedJson = require(deployedJsonPath);
     }
   }
 
@@ -98,6 +100,9 @@ class EthDeployUtils {
 
   getAddress(chainId, contractName) {
     if (this.rootDir) {
+      if (!this.deployedJson[chainId]) {
+        return;
+      }
       let address = this.deployedJson[chainId][contractName];
       if (Array.isArray(address)) {
         address = address[address.length - 1];
@@ -130,7 +135,11 @@ class EthDeployUtils {
     await deployed.deployed();
     this.debug("Deployed at", deployed.address);
     await this.saveDeployed(chainId, [contractName], [deployed.address]);
-    this.debug(await this.verifyCodeInstructions(contractName, deployed.deployTransaction.hash));
+    try {
+      this.debug(await this.verifyCodeInstructions(contractName, deployed.deployTransaction.hash));
+    } catch (e) {
+      // it can fail due to openzeppelin upgrades version
+    }
     return deployed;
   }
 
@@ -143,7 +152,11 @@ class EthDeployUtils {
     this.debug("Tx:", upgraded.deployTransaction.hash);
     await upgraded.deployed();
     this.debug("Upgraded");
-    this.debug(await this.verifyCodeInstructions(contractName, upgraded.deployTransaction.hash));
+    try {
+      this.debug(await this.verifyCodeInstructions(contractName, upgraded.deployTransaction.hash));
+    } catch (e) {
+      // it can fail due to openzeppelin upgrades version
+    }
     return upgraded;
   }
 
@@ -152,6 +165,9 @@ class EthDeployUtils {
       salt = constructorTypes;
       constructorTypes = undefined;
       constructorArgs = undefined;
+    }
+    if (!salt) {
+      salt = "0x00";
     }
     const json = await artifacts.readArtifact(contractName);
     let contractBytecode = json.bytecode;
