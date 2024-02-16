@@ -167,7 +167,7 @@ class EthDeployUtils {
       constructorArgs = undefined;
     }
     if (!salt) {
-      salt = "0x00";
+      salt = ethers.constants.HashZero;
     }
     const json = await artifacts.readArtifact(contractName);
     let contractBytecode = json.bytecode;
