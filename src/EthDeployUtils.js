@@ -204,6 +204,33 @@ class EthDeployUtils {
     return await ethers.getContractAt(contractName, address);
   }
 
+  async deployBytecodeViaNickSFactory(deployer, contractName, contractBytecode, salt, extraParams = {}) {
+    if (!salt) {
+      salt = ethers.constants.HashZero;
+    }
+    const address = ethers.utils.getCreate2Address(this.nickSFactoryAddress(), salt, ethers.utils.keccak256(contractBytecode));
+    const code = await ethers.provider.getCode(address);
+    if (code === "0x") {
+      const data = salt + contractBytecode.substring(2);
+      const tx = Object.assign({
+        to: this.nickSFactoryAddress(),
+        data,
+      }, extraParams);
+
+      const transaction = await deployer.sendTransaction(tx);
+      await transaction.wait();
+      this.debug(`Just deployed ${contractName} via Nick's Factory at`, address);
+      const chainId = await this.currentChainId();
+      const previouslyDeployedAt = await this.getAddress(chainId, contractName);
+      if (previouslyDeployedAt !== address) {
+        await this.saveDeployed(chainId, [contractName], [address]);
+      } // else, it has been already saved. We avoid duplicates
+    } else {
+      this.debug(`Previously deployed ${contractName} via Nick's Factory at`, address);
+    }
+    return await ethers.getContractAt(contractName, address);
+  }
+
   nickSFactoryAddress() {
     return `0x4e59b44847b379578588920ca78fbf26c0b4956c`;
   }
