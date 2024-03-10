@@ -181,7 +181,6 @@ class EthDeployUtils {
       const encodedArgs = ethers.utils.defaultAbiCoder.encode(constructorTypes, constructorArgs);
       contractBytecode = contractBytecode + encodedArgs.substring(2);
     }
-    
     if (contractName === "CrunaGuardian") {
       console.log(contractBytecode);
     }
@@ -209,15 +208,7 @@ class EthDeployUtils {
     return await ethers.getContractAt(contractName, address);
   }
 
-  async getBytecodeToBeDeployedViaNickSFactory(deployer, contractName, constructorTypes, constructorArgs, salt) {
-    if (!salt && !Array.isArray(constructorTypes)) {
-      salt = constructorTypes;
-      constructorTypes = undefined;
-      constructorArgs = undefined;
-    }
-    if (!salt) {
-      salt = ethers.constants.HashZero;
-    }
+  async getBytecodeToBeDeployedViaNickSFactory(deployer, contractName, constructorTypes, constructorArgs) {
     const json = await artifacts.readArtifact(contractName);
     let contractBytecode = json.bytecode;
     if (constructorTypes) {
@@ -226,8 +217,6 @@ class EthDeployUtils {
     }
     return contractBytecode;
   }
-
-
   async deployBytecodeViaNickSFactory(deployer, contractName, contractBytecode, salt, extraParams = {}) {
     if (!salt) {
       salt = ethers.constants.HashZero;
@@ -264,6 +253,9 @@ class EthDeployUtils {
       salt = constructorTypes;
       constructorTypes = undefined;
       constructorArgs = undefined;
+    }
+    if (!salt) {
+      salt = ethers.constants.HashZero;
     }
     const json = await artifacts.readArtifact(contractName);
     let contractBytecode = json.bytecode;
