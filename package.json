@@ -1,6 +1,6 @@
 {
   "name": "eth-deploy-utils",
-  "version": "1.0.1",
+  "version": "1.0.2",
   "description": "(A very opinionated) ETH Deploy Utils",
   "publishConfig": {
     "access": "public"

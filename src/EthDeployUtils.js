@@ -273,6 +273,13 @@ class EthDeployUtils {
     return ethers.utils.getCreate2Address(this.nickSFactoryAddress(), salt, ethers.utils.keccak256(contractBytecode));
   }
 
+  async getAddressOfContractDeployedWithBytecodeViaNickSFactory(deployer, contractName, contractBytecode, salt) {
+    if (!salt) {
+      salt = ethers.constants.HashZero;
+    }
+    return ethers.utils.getCreate2Address(this.nickSFactoryAddress(), salt, ethers.utils.keccak256(contractBytecode));
+  }
+
   async isContractDeployedViaNickSFactory(deployer, contractName, constructorTypes, constructorArgs, salt) {
     if (!salt && !Array.isArray(constructorTypes)) {
       salt = constructorTypes;
