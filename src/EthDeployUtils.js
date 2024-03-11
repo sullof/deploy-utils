@@ -273,7 +273,7 @@ class EthDeployUtils {
     return ethers.utils.getCreate2Address(this.nickSFactoryAddress(), salt, ethers.utils.keccak256(contractBytecode));
   }
 
-  async getAddressOfContractDeployedWithBytecodeViaNickSFactory(deployer, contractName, contractBytecode, salt) {
+  async getAddressOfContractDeployedWithBytecodeViaNickSFactory(deployer, contractBytecode, salt) {
     if (!salt) {
       salt = ethers.constants.HashZero;
     }
