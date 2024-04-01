@@ -208,7 +208,7 @@ class EthDeployUtils {
     return await ethers.getContractAt(contractName, address);
   }
 
-  async getBytecodeToBeDeployedViaNickSFactory(deployer, contractName, constructorTypes, constructorArgs) {
+  async getBytecodeToBeDeployedViaNickSFactory(contractName, constructorTypes, constructorArgs) {
     const json = await artifacts.readArtifact(contractName);
     let contractBytecode = json.bytecode;
     if (constructorTypes) {
@@ -248,7 +248,7 @@ class EthDeployUtils {
     return `0x4e59b44847b379578588920ca78fbf26c0b4956c`;
   }
 
-  async getAddressOfContractDeployedViaNickSFactory(deployer, contractName, constructorTypes, constructorArgs, salt) {
+  async getAddressOfContractDeployedViaNickSFactory(contractName, constructorTypes, constructorArgs, salt) {
     if (!salt && !Array.isArray(constructorTypes)) {
       salt = constructorTypes;
       constructorTypes = undefined;
@@ -273,21 +273,20 @@ class EthDeployUtils {
     return ethers.utils.getCreate2Address(this.nickSFactoryAddress(), salt, ethers.utils.keccak256(contractBytecode));
   }
 
-  async getAddressOfContractDeployedWithBytecodeViaNickSFactory(deployer, contractBytecode, salt) {
+  async getAddressOfContractDeployedWithBytecodeViaNickSFactory(contractBytecode, salt) {
     if (!salt) {
       salt = ethers.constants.HashZero;
     }
     return ethers.utils.getCreate2Address(this.nickSFactoryAddress(), salt, ethers.utils.keccak256(contractBytecode));
   }
 
-  async isContractDeployedViaNickSFactory(deployer, contractName, constructorTypes, constructorArgs, salt) {
+  async isContractDeployedViaNickSFactory(contractName, constructorTypes, constructorArgs, salt) {
     if (!salt && !Array.isArray(constructorTypes)) {
       salt = constructorTypes;
       constructorTypes = undefined;
       constructorArgs = undefined;
     }
     const address = await this.getAddressOfContractDeployedViaNickSFactory(
-      deployer,
       contractName,
       constructorTypes,
       constructorArgs,
