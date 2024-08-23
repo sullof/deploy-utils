@@ -1,4 +1,5 @@
 const hre = require("hardhat");
+const {artifacts} = require("hardhat");
 const ethers = hre.ethers;
 const path = require("path");
 const fs = require("fs-extra");
@@ -184,7 +185,7 @@ class EthDeployUtils {
     if (contractName === "CrunaGuardian") {
       console.log(contractBytecode);
     }
-        
+
     const address = ethers.utils.getCreate2Address(this.nickSFactoryAddress(), salt, ethers.utils.keccak256(contractBytecode));
     const code = await ethers.provider.getCode(address);
     if (code === "0x") {
