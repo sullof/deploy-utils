@@ -1,6 +1,5 @@
 
-require("@nomiclabs/hardhat-ethers");
-require("@nomiclabs/hardhat-waffle");
+require("@nomicfoundation/hardhat-chai-matchers");
 require("@openzeppelin/hardhat-upgrades");
 
 /**
