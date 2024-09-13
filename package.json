@@ -1,6 +1,6 @@
 {
   "name": "eth-deploy-utils",
-  "version": "3.0.0",
+  "version": "3.0.0-beta.0",
   "description": "(Very opinionated, suddenly-changing and speed versioning) ETH Deploy Utils",
   "publishConfig": {
     "access": "public"
