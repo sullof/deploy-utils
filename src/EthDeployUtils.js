@@ -8,6 +8,8 @@ const abi = require("ethereumjs-abi");
 
 const { networkNames, scanner, mainnets } = require("./Config");
 
+const abiCoder = new ethers.AbiCoder();
+
 class EthDeployUtils {
   constructor(rootDir, logger) {
     this.rootDir = rootDir;
@@ -37,11 +39,11 @@ class EthDeployUtils {
     const { INFURA_API_KEY } = process.env;
 
     const rpc = (url) => {
-      return new ethers.providers.JsonRpcProvider(url);
+      return new ethers.JsonRpcProvider(url);
     };
 
     let providers = {
-      1337: ethers.getDefaultProvider("http://localhost:8545"),
+      1337: new ethers.JsonRpcProvider("http://localhost:8545"),
     };
 
     if (INFURA_API_KEY) {
@@ -64,7 +66,7 @@ class EthDeployUtils {
   }
 
   async getContract(name, folder, address, chainId) {
-    return new Contract(address, await this.getABI(name, folder), this.getProviders()[chainId]);
+    return new ethers.Contract(address, await this.getABI(name, folder), this.getProviders()[chainId]);
   }
 
   isMainnet(chainId) {
@@ -89,17 +91,26 @@ class EthDeployUtils {
     this.debug("Deploying", contractName, "to", hre.network.name);
     const contract = await ethers.getContractFactory(contractName);
     const deployed = await contract.deploy(...args);
-    this.debug("Tx:", deployed.deployTransaction.hash);
-    await deployed.deployed();
-    this.debug("Deployed at", deployed.address);
-    await this.saveDeployed(chainId, [contractName], [deployed.address]);
+
+    // Get the deployment transaction
+    const deploymentTransaction = deployed.deploymentTransaction();
+
+    this.debug("Tx:", deploymentTransaction.hash);
+
+    // Wait for the deployment to be mined
+    await deployed.waitForDeployment();
+
+    const address = await deployed.getAddress();
+    this.debug("Deployed at", address);
+    await this.saveDeployed(chainId, [contractName], [address]);
+
     if (!/1337$/.test(chainId.toString())) {
       this.debug(`To verify the source code:
-    
-  npx hardhat verify --show-stack-traces --network ${hre.network.name} ${deployed.address} ${[...args]
-    .map((e) => e.toString())
-    .join(" ")}
-      
+
+npx hardhat verify --show-stack-traces --network ${hre.network.name} ${address} ${[...args]
+        .map((e) => e.toString())
+        .join(" ")}
+  
 `);
     }
     return deployed;
@@ -137,13 +148,17 @@ class EthDeployUtils {
     const chainId = await this.currentChainId();
     this.debug("Deploying", contractName, "to", hre.network.name);
     const contract = await ethers.getContractFactory(contractName);
-    const deployed = await upgrades.deployProxy(contract, [...args], options);
-    this.debug("Tx:", deployed.deployTransaction.hash);
-    await deployed.deployed();
-    this.debug("Deployed at", deployed.address);
-    await this.saveDeployed(chainId, [contractName], [deployed.address]);
+    const deployed = await hre.upgrades.deployProxy(contract, [...args], options);
+
+    // Wait for the transaction to be mined
+    const receipt = await deployed.deploymentTransaction();
+
+    this.debug("Tx:", receipt.hash);
+    const address = await deployed.getAddress();
+    this.debug("Deployed at", address);
+    await this.saveDeployed(chainId, [contractName], [address]);
     try {
-      this.debug(await this.verifyCodeInstructions(contractName, deployed.deployTransaction.hash));
+      this.debug(await this.verifyCodeInstructions(contractName, receipt.hash));
     } catch (e) {
       // it can fail due to openzeppelin upgrades version
     }
@@ -155,15 +170,20 @@ class EthDeployUtils {
     this.debug("Upgrading", contractName, "to", hre.network.name);
     const Contract = await ethers.getContractFactory(contractName);
     const address = this.getAddress(chainId, contractName);
-    const upgraded = await upgrades.upgradeProxy(address, Contract, gasLimit ? { gasLimit } : {});
-    this.debug("Tx:", upgraded.deployTransaction.hash);
-    await upgraded.deployed();
+    const upgraded = await hre.upgrades.upgradeProxy(address, Contract, gasLimit ? { gasLimit } : {});
+
+    // Wait for the transaction to be mined
+    const receipt = await upgraded.deploymentTransaction().wait();
+
+    this.debug("Tx:", receipt.hash);
     this.debug("Upgraded");
+
     try {
-      this.debug(await this.verifyCodeInstructions(contractName, upgraded.deployTransaction.hash));
+      this.debug(await this.verifyCodeInstructions(contractName, receipt.hash));
     } catch (e) {
       // it can fail due to openzeppelin upgrades version
     }
+
     return upgraded;
   }
 
@@ -179,14 +199,14 @@ class EthDeployUtils {
     const json = await artifacts.readArtifact(contractName);
     let contractBytecode = json.bytecode;
     if (constructorTypes) {
-      const encodedArgs = ethers.utils.defaultAbiCoder.encode(constructorTypes, constructorArgs);
+      const encodedArgs = abiCoder.encode(constructorTypes, constructorArgs);
       contractBytecode = contractBytecode + encodedArgs.substring(2);
     }
     if (contractName === "CrunaGuardian") {
       console.log(contractBytecode);
     }
 
-    const address = ethers.utils.getCreate2Address(this.nickSFactoryAddress(), salt, ethers.utils.keccak256(contractBytecode));
+    const address = ethers.getCreate2Address(this.nickSFactoryAddress(), salt, ethers.keccak256(contractBytecode));
     const code = await ethers.provider.getCode(address);
     if (code === "0x") {
       const data = salt + contractBytecode.substring(2);
@@ -213,7 +233,7 @@ class EthDeployUtils {
     const json = await artifacts.readArtifact(contractName);
     let contractBytecode = json.bytecode;
     if (constructorTypes) {
-      const encodedArgs = ethers.utils.defaultAbiCoder.encode(constructorTypes, constructorArgs);
+      const encodedArgs = abiCoder.encode(constructorTypes, constructorArgs);
       contractBytecode = contractBytecode + encodedArgs.substring(2);
     }
     return contractBytecode;
@@ -222,7 +242,7 @@ class EthDeployUtils {
     if (!salt) {
       salt = ethers.constants.HashZero;
     }
-    const address = ethers.utils.getCreate2Address(this.nickSFactoryAddress(), salt, ethers.utils.keccak256(contractBytecode));
+    const address = ethers.getCreate2Address(this.nickSFactoryAddress(), salt, ethers.keccak256(contractBytecode));
     const code = await ethers.provider.getCode(address);
     if (code === "0x") {
       const data = salt + contractBytecode.substring(2);
@@ -267,18 +287,19 @@ class EthDeployUtils {
 
     if (constructorTypes) {
       // ABI-encode the constructor arguments
-      const encodedArgs = ethers.utils.defaultAbiCoder.encode(constructorTypes, constructorArgs);
+      const abiCoder = new ethers.AbiCoder();
+      const encodedArgs = abiCoder.encode(constructorTypes, constructorArgs);
       contractBytecode = contractBytecode + encodedArgs.substring(2); // Remove '0x' from encoded args
     }
 
-    return ethers.utils.getCreate2Address(this.nickSFactoryAddress(), salt, ethers.utils.keccak256(contractBytecode));
+    return ethers.getCreate2Address(this.nickSFactoryAddress(), salt, ethers.keccak256(contractBytecode));
   }
 
   async getAddressOfContractDeployedWithBytecodeViaNickSFactory(contractBytecode, salt) {
     if (!salt) {
       salt = ethers.constants.HashZero;
     }
-    return ethers.utils.getCreate2Address(this.nickSFactoryAddress(), salt, ethers.utils.keccak256(contractBytecode));
+    return ethers.getCreate2Address(this.nickSFactoryAddress(), salt, ethers.keccak256(contractBytecode));
   }
 
   async isContractDeployedViaNickSFactory(contractName, constructorTypes, constructorArgs, salt) {
@@ -299,12 +320,12 @@ class EthDeployUtils {
   }
 
   keccak256(str) {
-    const bytes = ethers.utils.toUtf8Bytes(str);
-    return ethers.utils.keccak256(bytes);
+    const bytes = ethers.toUtf8Bytes(str);
+    return ethers.keccak256(bytes);
   }
 
   bytes4(bytes32value) {
-    return ethers.utils.hexDataSlice(bytes32value, 0, 4);
+    return ethers.dataSlice(bytes32value, 0, 4);
   }
 
   network(chainId) {
@@ -358,18 +379,22 @@ class EthDeployUtils {
       const addressOfDeployer = `0x3fab184622dc19b6109349b94811493bf2a45362`;
       let txResponse = await deployer.sendTransaction({
         to: addressOfDeployer,
-        value: ethers.utils.parseUnits(`0.1`, `ether`),
+        value: ethers.parseUnits(`0.1`, `ether`),
         gasLimit: 100000,
       });
       await txResponse.wait();
       const serializedTx = `0xf8a58085174876e800830186a08080b853604580600e600039806000f350fe7fffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffe03601600081602082378035828234f58015156039578182fd5b8082525050506014600cf31ba02222222222222222222222222222222222222222222222222222222222222222a02222222222222222222222222222222222222222222222222222222222222222`;
-      txResponse = await ethers.provider.sendTransaction(serializedTx);
+
+      // New way to send raw transaction in ethers v6
+      txResponse = await ethers.provider.broadcastTransaction(serializedTx);
+
       this.debug("Deploying Nick's Factory");
       return txResponse.wait();
     } else {
       this.debug("Nick's factory already deployed on this network");
     }
   }
+
   async verifyCodeInstructions(contractName, tx) {
     if (this.rootDir) {
       const chainId = await this.currentChainId();
