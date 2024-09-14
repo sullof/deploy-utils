@@ -25,6 +25,12 @@
     "name": "Francesco Sullo",
     "email": "francesco@sullo.co"
   },
+  "contributors": [
+    {
+      "name": "Andy Craven",
+      "email": "andyscraven@gmail.com"
+    }
+  ],
   "bugs": {
     "url": "https://github.com/sullof/deploy-utils/issues"
   },
