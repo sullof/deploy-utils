@@ -58,15 +58,12 @@ class EthDeployUtils {
     return providers;
   }
 
-  async getABI(name, folder) {
-    const fn = path.resolve(__dirname, `../../artifacts/contracts/${folder}/${name}.sol/${name}.json`);
-    if (fs.pathExists(fn)) {
-      return JSON.parse(await fs.readFile(fn, "utf8")).abi;
-    }
+  async getABI(name) {
+    return (await artifacts.readArtifact(name)).abi
   }
 
-  async getContract(name, folder, address, chainId) {
-    return new ethers.Contract(address, await this.getABI(name, folder), this.getProviders()[chainId]);
+  async getContract(name, address, chainId) {
+    return new ethers.Contract(address, await this.getABI(name), this.getProviders()[chainId]);
   }
 
   isMainnet(chainId) {
