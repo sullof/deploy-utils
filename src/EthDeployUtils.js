@@ -62,8 +62,8 @@ class EthDeployUtils {
     return (await artifacts.readArtifact(name)).abi
   }
 
-  async getContract(name, address, chainId) {
-    return new ethers.Contract(address, await this.getABI(name), this.getProviders()[chainId]);
+  async getContract(name, address) {
+    return new ethers.Contract(address, await this.getABI(name), ethers.provider);
   }
 
   isMainnet(chainId) {
