@@ -1,5 +1,5 @@
 const hre = require("hardhat");
-const {artifacts} = require("hardhat");
+const { artifacts } = require("hardhat");
 const ethers = hre.ethers;
 const path = require("path");
 const fs = require("fs-extra");
@@ -59,7 +59,7 @@ class EthDeployUtils {
   }
 
   async getABI(name) {
-    return (await artifacts.readArtifact(name)).abi
+    return (await artifacts.readArtifact(name)).abi;
   }
 
   async getContract(name, address) {
@@ -104,9 +104,7 @@ class EthDeployUtils {
     if (!/1337$/.test(chainId.toString())) {
       this.debug(`To verify the source code:
 
-npx hardhat verify --show-stack-traces --network ${hre.network.name} ${address} ${[...args]
-        .map((e) => e.toString())
-        .join(" ")}
+npx hardhat verify --show-stack-traces --network ${hre.network.name} ${address} ${[...args].map((e) => e.toString()).join(" ")}
   
 `);
     }
@@ -191,7 +189,7 @@ npx hardhat verify --show-stack-traces --network ${hre.network.name} ${address} 
       constructorArgs = undefined;
     }
     if (!salt) {
-      salt = ethers.constants.HashZero;
+      salt = ethers.ZeroHash;
     }
     const json = await artifacts.readArtifact(contractName);
     let contractBytecode = json.bytecode;
@@ -207,10 +205,13 @@ npx hardhat verify --show-stack-traces --network ${hre.network.name} ${address} 
     const code = await ethers.provider.getCode(address);
     if (code === "0x") {
       const data = salt + contractBytecode.substring(2);
-      const tx = Object.assign({
-        to: this.nickSFactoryAddress(),
-        data,
-      }, extraParams);
+      const tx = Object.assign(
+        {
+          to: this.nickSFactoryAddress(),
+          data,
+        },
+        extraParams,
+      );
 
       const transaction = await deployer.sendTransaction(tx);
       await transaction.wait();
@@ -237,16 +238,19 @@ npx hardhat verify --show-stack-traces --network ${hre.network.name} ${address} 
   }
   async deployBytecodeViaNickSFactory(deployer, contractName, contractBytecode, salt, extraParams = {}) {
     if (!salt) {
-      salt = ethers.constants.HashZero;
+      salt = ethers.ZeroHash;
     }
     const address = ethers.getCreate2Address(this.nickSFactoryAddress(), salt, ethers.keccak256(contractBytecode));
     const code = await ethers.provider.getCode(address);
     if (code === "0x") {
       const data = salt + contractBytecode.substring(2);
-      const tx = Object.assign({
-        to: this.nickSFactoryAddress(),
-        data,
-      }, extraParams);
+      const tx = Object.assign(
+        {
+          to: this.nickSFactoryAddress(),
+          data,
+        },
+        extraParams,
+      );
 
       const transaction = await deployer.sendTransaction(tx);
       await transaction.wait();
@@ -273,7 +277,7 @@ npx hardhat verify --show-stack-traces --network ${hre.network.name} ${address} 
       constructorArgs = undefined;
     }
     if (!salt) {
-      salt = ethers.constants.HashZero;
+      salt = ethers.ZeroHash;
     }
     const json = await artifacts.readArtifact(contractName);
     let contractBytecode = json.bytecode;
@@ -294,7 +298,7 @@ npx hardhat verify --show-stack-traces --network ${hre.network.name} ${address} 
 
   async getAddressOfContractDeployedWithBytecodeViaNickSFactory(contractBytecode, salt) {
     if (!salt) {
-      salt = ethers.constants.HashZero;
+      salt = ethers.ZeroHash;
     }
     return ethers.getCreate2Address(this.nickSFactoryAddress(), salt, ethers.keccak256(contractBytecode));
   }
